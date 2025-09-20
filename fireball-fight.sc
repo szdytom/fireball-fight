@@ -302,6 +302,8 @@ __on_player_drops_item(myself) -> (
 	item_tuple = myself ~ 'holds';
 	if (item_tuple:0 == 'spyglass' || item_tuple:0 == 'amethyst_shard', (
 		display_title(myself, 'actionbar', '不建议丢弃此物品，使用Ctrl-Q强制丢弃。');
+		inventory_remove(myself, item_tuple:0);
+		run('give ' + myself ~ 'name' + ' ' + item_tuple:0);
 		return('cancel');
 	));
 );
