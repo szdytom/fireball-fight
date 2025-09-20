@@ -5,6 +5,7 @@ __config() -> {
 		'start' -> 'commandStart',
 		'stop' -> 'commandStop',
 		'relocate' -> 'commandRelocate',
+		'relocatehere' -> 'commandRelocateHere',
 		'reward <selection> <rewradVer>' -> 'commandReward'
 	},
 	'arguments' -> {
@@ -77,12 +78,24 @@ tickToTime(ticks) -> (
     return(str('%d 分钟 %d 秒', floor(ticks / 1200), (ticks / 20) % 60));
 );
 
+relocateAt(x, y) -> (
+	print('游戏中心点已设定为：' + x + ', ' + y);
+	run(str('setworldspawn %d 400 %d', x, y));
+	run(str('spreadplayers %d %d 20 50 false @a', x, y));
+);
+
 commandRelocate() -> (
 	centerX = floor(rand(29000000));
 	centerZ = floor(rand(29000000));
-	print('游戏中心点已设定为：' + centerX + ', ' + centerZ);
-	run(str('setworldspawn %d 400 %d', centerX, centerZ));
-	run(str('spreadplayers %d %d 20 50 false @a', centerX, centerZ));
+	relocateAt(centerX, centerZ);
+	return(true);
+);
+
+commandRelocateHere() -> (
+	myself = player();
+	pos = myself ~ 'pos';
+	relocateAt(floor(pos:0), floor(pos:2));
+	return(true);
 );
 
 commandStop() -> (
