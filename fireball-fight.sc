@@ -12,8 +12,8 @@ __config() -> {
 		'selection' -> {
 			'type' -> 'int',
 			'min' -> 0,
-			'max' -> 3,
-			'suggest' -> [0, 1, 2, 3]
+			'max' -> 4,
+			'suggest' -> [0, 1, 2, 3, 4]
 		},
 		'rewradVer' -> {
 			'type' -> 'int',
@@ -63,9 +63,31 @@ touchPlayerDat(myuuid) -> (
 			'nextChoices' -> null,
 			'rewardVer' -> 1,
 			'armorLvl' -> 0,
-			'hasSharpSword' -> false
+			'hasSharpSword' -> false,
+			'effectFireResistance' -> false,
+			'effectInvisibility' -> false,
+			'effectSpeedLvl' -> -1
         });
     ));
+);
+
+handlePlayerRespawn(myself) -> (
+	myuuid = myself ~ 'uuid';
+	touchPlayerDat(myuuid);
+	if (global_playerDatMap:myuuid:'effectFireResistance', (
+		effectFireResistance(myself);
+	));
+	if (global_playerDatMap:myuuid:'effectInvisibility', (
+		effectInvisibility(myself);
+	));
+	if (global_playerDatMap:myuuid:'effectSpeedLvl' != -1, (
+		effectSpeed(myself, global_playerDatMap:myuuid:'effectSpeedLvl');
+	));
+);
+
+__on_player_respawns(myself) -> (
+	// player entity is not fully loaded yet, so we delay the handling
+	schedule(1, 'handlePlayerRespawn', myself);
 );
 
 tickToTime(ticks) -> (
@@ -121,6 +143,8 @@ commandStart() -> (
 	global_playerDatMap = {};
 
     run('clear @a');
+	run('effect clear @a');
+
 	schedule(0, 'prepareGameCountdown', 60);
 
 	return(true);
@@ -334,6 +358,18 @@ updateNextChoices(myuuid) -> (
 				global_playerDatMap:myuuid:'nextChoices' += choices:i;
 			));
 		));
+		effectChoicesFuncs = ['choiceEffectFireResistance', 'choiceEffectInvisibility', 'choiceEffectSpeed'];
+		effectChoices = [];
+		for (effectChoicesFuncs, (
+			choice = call(_, myuuid);
+			if (choice != false, (
+				effectChoices += choice;
+			));
+		));
+		if (length(effectChoices) > 0, (
+			effectChoice = effectChoices:floor(rand(length(effectChoices)));
+			global_playerDatMap:myuuid:'nextChoices' += effectChoice;
+		));
 	));
 );
 
@@ -484,6 +520,69 @@ rewardEquipArmor(myself) -> (
 	if(curLvl == 2, (
 		playerEquipArmor(myself, 'diamond');
 		global_playerDatMap:myuuid:'armorLvl' = 3;
+		return(true);
+	));
+	return(false);
+);
+
+choiceEffectFireResistance(myuuid) -> (
+	if(global_playerDatMap:myuuid:'effectFireResistance', (
+		return(false);
+	));
+	return(['获得抗火效果', 'grantEffectFireResistance']);
+);
+
+effectFireResistance(myself) -> (
+	run('effect give ' + myself ~ 'name' + ' minecraft:fire_resistance infinite 2 true');
+);
+
+grantEffectFireResistance(myself) -> (
+	myuuid = myself ~ 'uuid';
+	global_playerDatMap:myuuid:'effectFireResistance' = true;
+	effectFireResistance(myself);
+);
+
+choiceEffectInvisibility(myuuid) -> (
+	if(global_playerDatMap:myuuid:'effectInvisibility', (
+		return(false);
+	));
+	return(['获得隐身效果', 'grantEffectInvisibility']);
+);
+
+effectInvisibility(myself) -> (
+	run('effect give ' + myself ~ 'name' + ' minecraft:invisibility infinite 1 true');
+);
+
+grantEffectInvisibility(myself) -> (
+	myuuid = myself ~ 'uuid';
+	global_playerDatMap:myuuid:'effectInvisibility' = true;
+	effectInvisibility(myself);
+);
+
+choiceEffectSpeed(myuuid) -> (
+	if(global_playerDatMap:myuuid:'effectSpeedLvl' == -1, (
+		return(['获得速度 II 效果', 'grantEffectSpeed']);
+	));
+	if(global_playerDatMap:myuuid:'effectSpeedLvl' == 1, (
+		return(['升级为速度 IV 效果', 'grantEffectSpeed']);
+	));
+	return(false);
+);
+
+effectSpeed(myself, level) -> (
+	run('effect give ' + myself ~ 'name' + ' minecraft:speed infinite ' + level + ' true');
+);
+
+grantEffectSpeed(myself) -> (
+	myuuid = myself ~ 'uuid';
+	if(global_playerDatMap:myuuid:'effectSpeedLvl' == -1, (
+		global_playerDatMap:myuuid:'effectSpeedLvl' = 1;
+		effectSpeed(myself, 1);
+		return(true);
+	));
+	if(global_playerDatMap:myuuid:'effectSpeedLvl' == 1, (
+		global_playerDatMap:myuuid:'effectSpeedLvl' = 3;
+		effectSpeed(myself, 3);
 		return(true);
 	));
 	return(false);
