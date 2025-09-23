@@ -6,7 +6,11 @@ __config() -> {
 		'stop' -> 'commandStop',
 		'relocate' -> 'commandRelocate',
 		'relocatehere' -> 'commandRelocateHere',
-		'reward <selection> <rewradVer>' -> 'commandReward'
+		'reward <selection> <rewradVer>' -> 'commandReward',
+		'debug multishot' -> 'debugEnableMultishot',
+		'debug fbpower <val>' -> 'debugSetFbPower',
+		'debug cooldown <val>' -> 'debugSetCooldown',
+		'debug fbspeed <val>' -> 'debugSetFbSpeed',
 	},
 	'arguments' -> {
 		'selection' -> {
@@ -17,6 +21,9 @@ __config() -> {
 		},
 		'rewradVer' -> {
 			'type' -> 'int',
+		},
+		'val' -> {
+			'type' -> 'int',
 		}
 	}
 };
@@ -26,6 +33,8 @@ global_timeCounter = 0;
 global_gameRunning = false;
 global_multiAngleSin = sin(15);
 global_multiAngleCos = cos(15);
+global_multiAngle2Sin = sin(30);
+global_multiAngle2Cos = cos(30);
 
 shuffleList(varList) -> (
 	len = length(varList);
@@ -232,10 +241,15 @@ shootFireball(myself) -> (
 	shootFireballEntity(myself, fbPower, playerPos, fbM);
 	if(global_playerDatMap:myuuid:'multishot', (
 		fbM = myself ~ 'motion';
+		fbM:1 = 0;
 		vRotL = [v:0 * global_multiAngleCos - v:2 * global_multiAngleSin, v:1, v:0 * global_multiAngleSin + v:2 * global_multiAngleCos];
 		shootFireballEntity(myself, fbPower, playerPos, fbM + vRotL);
 		vRotR = [v:0 * global_multiAngleCos + v:2 * global_multiAngleSin, v:1, -v:0 * global_multiAngleSin + v:2 * global_multiAngleCos];
 		shootFireballEntity(myself, fbPower, playerPos, fbM + vRotR);
+		vRotL2 = [v:0 * global_multiAngle2Cos - v:2 * global_multiAngle2Sin, v:1, v:0 * global_multiAngle2Sin + v:2 * global_multiAngle2Cos];
+		shootFireballEntity(myself, fbPower, playerPos, fbM + vRotL2);
+		vRotR2 = [v:0 * global_multiAngle2Cos + v:2 * global_multiAngle2Sin, v:1, -v:0 * global_multiAngle2Sin + v:2 * global_multiAngle2Cos];
+		shootFireballEntity(myself, fbPower, playerPos, fbM + vRotR2);
 	));
     return(true);
 );
@@ -358,7 +372,7 @@ updateNextChoices(myuuid) -> (
 				global_playerDatMap:myuuid:'nextChoices' += choices:i;
 			));
 		));
-		effectChoicesFuncs = ['choiceEffectFireResistance', 'choiceEffectInvisibility', 'choiceEffectSpeed'];
+		effectChoicesFuncs = ['choiceEffectFireResistance', 'choiceEffectSpeed'];
 		effectChoices = [];
 		for (effectChoicesFuncs, (
 			choice = call(_, myuuid);
@@ -586,4 +600,56 @@ grantEffectSpeed(myself) -> (
 		return(true);
 	));
 	return(false);
+);
+
+debugEnableMultishot() -> (
+	myself = player();
+	myuuid = myself ~ 'uuid';
+	touchPlayerDat(myuuid);
+	enableMultishot(myself);
+	print('已启用多重射击');
+	return(true);
+);
+
+debugSetFbPower(level) -> (
+	if (level < 1 || level > 80, (
+		print('火球威力等级必须在 1 到 80 之间');
+		return(false);
+	));
+	myself = player();
+	myuuid = myself ~ 'uuid';
+	touchPlayerDat(myuuid);
+	global_playerDatMap:myuuid:'fbPower' = level;
+	print('已设置火球威力等级为 ' + level);
+	return(true);
+);
+
+debugSetCooldown(val) -> (
+	if (val < 0 || val > 1000, (
+		print('冷却时间必须在 0 到 1000 之间');
+		return(false);
+	));
+	myself = player();
+	myuuid = myself ~ 'uuid';
+	touchPlayerDat(myuuid);
+	global_playerDatMap:myuuid:'cooldown' = val;
+	print('已设置冷却时间为 ' + (val / 20.0) + ' 秒');
+	if (val == 0, (
+		inventory_remove(myself, 'spyglass');
+		run('give ' + myself ~ 'name' + ' amethyst_shard');
+	));
+	return(true);
+);
+
+debugSetFbSpeed(val) -> (
+	if (val < 1 || val > 4, (
+		print('火球飞行速度倍数必须在 1 到 4 之间');
+		return(false);
+	));
+	myself = player();
+	myuuid = myself ~ 'uuid';
+	touchPlayerDat(myuuid);
+	global_playerDatMap:myuuid:'fbSpeed' = val;
+	print('已设置火球飞行速度倍数为 ' + val);
+	return(true);
 );
